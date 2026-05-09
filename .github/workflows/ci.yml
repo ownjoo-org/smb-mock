@@ -21,3 +21,24 @@ jobs:
 
       - name: Run unit tests
         run: python -m pytest tests/unit/ -q
+
+      - name: Bandit — Python security linter
+        run: |
+          pip install bandit[toml] --quiet
+          bandit -r docker/ cli/ -ll -q
+
+  lint-dockerfiles:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile:
+          - docker/kdc/Dockerfile
+          - docker/samba/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hadolint — ${{ matrix.dockerfile }}
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          failure-threshold: warning
