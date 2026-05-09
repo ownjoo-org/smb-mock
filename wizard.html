@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>smb-mock Configuration Wizard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; }
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #7dd3fc;
+    margin-bottom: .25rem;
+  }
+  .subtitle { color: #64748b; font-size: .9rem; margin-bottom: 2rem; }
+
+  section {
+    background: #1e2433;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  section h2 {
+    font-size: .85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #7dd3fc;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #2d3748;
+    padding-bottom: .5rem;
+  }
+
+  .field { margin-bottom: .85rem; }
+  .field label {
+    display: block;
+    font-size: .82rem;
+    color: #94a3b8;
+    margin-bottom: .3rem;
+  }
+  .field input[type=text],
+  .field input[type=number],
+  .field input[type=password],
+  .field select {
+    width: 100%;
+    background: #0f1117;
+    border: 1px solid #374151;
+    border-radius: 5px;
+    color: #e2e8f0;
+    padding: .45rem .75rem;
+    font-size: .9rem;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: #7dd3fc;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .6rem;
+  }
+  .toggle-row label { font-size: .88rem; color: #cbd5e1; cursor: pointer; }
+  input[type=checkbox] {
+    width: 16px; height: 16px;
+    accent-color: #7dd3fc;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* Repeating rows (users, shares, trusts) */
+  .repeat-list { display: flex; flex-direction: column; gap: .6rem; margin-bottom: .75rem; }
+  .repeat-row {
+    display: grid;
+    gap: .5rem;
+    align-items: center;
+    background: #151b27;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    padding: .6rem .75rem;
+  }
+  .repeat-row.user-row   { grid-template-columns: 1fr 1fr auto; }
+  .repeat-row.share-row  { grid-template-columns: 1fr 1.4fr 70px auto; }
+  .repeat-row.trust-row  { grid-template-columns: 1fr 1fr 1fr 90px auto; }
+  .repeat-row input, .repeat-row select {
+    background: #0f1117;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    color: #e2e8f0;
+    padding: .35rem .6rem;
+    font-size: .85rem;
+    outline: none;
+    width: 100%;
+  }
+  .repeat-row input:focus, .repeat-row select:focus { border-color: #7dd3fc; }
+
+  .col-label {
+    display: grid;
+    gap: .5rem;
+    margin-bottom: .3rem;
+    color: #64748b;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .col-label.user-cols   { grid-template-columns: 1fr 1fr auto; }
+  .col-label.share-cols  { grid-template-columns: 1fr 1.4fr 70px auto; }
+  .col-label.trust-cols  { grid-template-columns: 1fr 1fr 1fr 90px auto; }
+
+  .btn-remove {
+    background: none;
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: .8rem;
+    padding: .25rem .55rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .btn-remove:hover { background: #374151; color: #e2e8f0; }
+
+  .btn-add {
+    background: none;
+    border: 1px dashed #374151;
+    border-radius: 5px;
+    color: #7dd3fc;
+    cursor: pointer;
+    font-size: .82rem;
+    padding: .4rem .9rem;
+    width: 100%;
+    text-align: center;
+    transition: background .15s;
+  }
+  .btn-add:hover { background: #1e2d40; }
+
+  /* Output section */
+  .tab-bar { display: flex; gap: .4rem; margin-bottom: .75rem; flex-wrap: wrap; }
+  .tab-btn {
+    background: #0f1117;
+    border: 1px solid #374151;
+    border-radius: 5px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: .82rem;
+    padding: .4rem .9rem;
+    transition: all .15s;
+  }
+  .tab-btn.active, .tab-btn:hover {
+    background: #172032;
+    border-color: #7dd3fc;
+    color: #7dd3fc;
+  }
+
+  pre {
+    background: #0a0e16;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    color: #a5f3fc;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: .8rem;
+    line-height: 1.55;
+    overflow-x: auto;
+    padding: 1rem;
+    white-space: pre;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .dl-bar { display: flex; gap: .6rem; margin-top: .75rem; flex-wrap: wrap; }
+  .btn-dl {
+    background: #1d4ed8;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    cursor: pointer;
+    font-size: .83rem;
+    font-weight: 600;
+    padding: .5rem 1.1rem;
+    transition: background .15s;
+  }
+  .btn-dl:hover { background: #2563eb; }
+  .btn-copy {
+    background: #374151;
+    border: none;
+    border-radius: 5px;
+    color: #e2e8f0;
+    cursor: pointer;
+    font-size: .83rem;
+    padding: .5rem 1rem;
+    transition: background .15s;
+  }
+  .btn-copy:hover { background: #4b5563; }
+  .btn-copy.copied { background: #166534; color: #bbf7d0; }
+
+  .notice {
+    background: #1c2d1e;
+    border: 1px solid #166534;
+    border-radius: 6px;
+    color: #86efac;
+    font-size: .82rem;
+    margin-top: .85rem;
+    padding: .7rem 1rem;
+  }
+  .notice strong { color: #4ade80; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 640px) {
+    .repeat-row.share-row  { grid-template-columns: 1fr 1fr; }
+    .repeat-row.trust-row  { grid-template-columns: 1fr 1fr; }
+    .col-label.share-cols  { display: none; }
+    .col-label.trust-cols  { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>smb-mock Configuration Wizard</h1>
+  <p class="subtitle">Double-click this file · no server needed · all output generated locally</p>
+
+  <!-- ── Identity ─────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Identity</h2>
+    <div class="field">
+      <label>SMB server FQDN</label>
+      <input type="text" id="smb_hostname" value="smbserver.smbtest.local">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="field">
+        <label>Workgroup / NetBIOS domain</label>
+        <input type="text" id="workgroup" value="SMBTEST">
+      </div>
+      <div class="field">
+        <label>Kerberos realm</label>
+        <input type="text" id="realm" value="SMBTEST.LOCAL">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Authentication ───────────────────────────────────────────────── -->
+  <section>
+    <h2>Authentication</h2>
+    <div class="toggle-row">
+      <input type="checkbox" id="anon" checked>
+      <label for="anon">Allow anonymous / guest access</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="ntlm" checked>
+      <label for="ntlm">Enable NTLMv2</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="kerberos" checked onchange="toggleKerberos()">
+      <label for="kerberos">Enable Kerberos / SPNEGO</label>
+    </div>
+    <div id="kerberos_opts" class="field" style="margin-top:.75rem">
+      <label>KDC admin password</label>
+      <input type="password" id="kdc_admin_password" value="adminpass" placeholder="KDC admin password">
+    </div>
+  </section>
+
+  <!-- ── Port mappings ────────────────────────────────────────────────── -->
+  <section>
+    <h2>Port mappings  <span style="color:#64748b;font-weight:400;font-size:.78rem">(host → container)</span></h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="field">
+        <label>SMB port (→ 445)</label>
+        <input type="number" id="smb_port" value="445" min="1" max="65535">
+      </div>
+      <div class="field" id="kdc_port_field">
+        <label>KDC port (→ 88)</label>
+        <input type="number" id="kdc_port" value="88" min="1" max="65535">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Users ────────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Users</h2>
+    <div class="col-label user-cols">
+      <span>Username</span><span>Password</span><span></span>
+    </div>
+    <div class="repeat-list" id="users-list"></div>
+    <button class="btn-add" onclick="addUser()">+ Add user</button>
+  </section>
+
+  <!-- ── Shares ───────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Shares</h2>
+    <div class="col-label share-cols">
+      <span>Share name</span><span>Container path</span><span>Mode</span><span></span>
+    </div>
+    <div class="repeat-list" id="shares-list"></div>
+    <button class="btn-add" onclick="addShare()">+ Add share</button>
+  </section>
+
+  <!-- ── Trusts ───────────────────────────────────────────────────────── -->
+  <section id="trusts-section">
+    <h2>Kerberos cross-realm trusts  <span style="color:#64748b;font-weight:400;font-size:.78rem">(optional)</span></h2>
+    <div class="col-label trust-cols">
+      <span>Trusted realm</span><span>Remote KDC host</span><span>Shared secret</span><span>Direction</span><span></span>
+    </div>
+    <div class="repeat-list" id="trusts-list"></div>
+    <button class="btn-add" onclick="addTrust()">+ Add trust</button>
+    <p style="color:#64748b;font-size:.78rem;margin-top:.6rem">
+      The remote KDC must add a reciprocal trust principal for your realm.
+    </p>
+  </section>
+
+  <!-- ── Output ───────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Generated output</h2>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('env')">.env file</button>
+      <button class="tab-btn" onclick="showTab('docker-run')">docker run script</button>
+      <button class="tab-btn" onclick="showTab('compose-override')">compose override</button>
+    </div>
+    <pre id="output-pre"></pre>
+    <div class="dl-bar">
+      <button class="btn-dl" id="dl-btn" onclick="downloadOutput()">Download</button>
+      <button class="btn-copy" id="copy-btn" onclick="copyOutput()">Copy</button>
+    </div>
+    <div id="krb-notice" class="notice hidden">
+      <strong>Kerberos note:</strong> add this line to <code>/etc/hosts</code>
+      (or the Windows equivalent) on every client machine:<br>
+      <code id="hosts-hint"></code>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────
+let userCount = 0;
+let shareCount = 0;
+let trustCount = 0;
+let currentTab = 'env';
+
+// ── Kerberos toggle ──────────────────────────────────────────────────────
+function toggleKerberos() {
+  const on = document.getElementById('kerberos').checked;
+  document.getElementById('kerberos_opts').classList.toggle('hidden', !on);
+  document.getElementById('kdc_port_field').classList.toggle('hidden', !on);
+  document.getElementById('trusts-section').classList.toggle('hidden', !on);
+  generate();
+}
+
+// ── Repeating rows ───────────────────────────────────────────────────────
+function addUser() {
+  const i = userCount++;
+  const row = document.createElement('div');
+  row.className = 'repeat-row user-row';
+  row.id = `user-row-${i}`;
+  row.innerHTML = `
+    <input type="text"     placeholder="username"  id="u_name_${i}"  oninput="generate()">
+    <input type="password" placeholder="password"  id="u_pass_${i}"  oninput="generate()">
+    <button class="btn-remove" onclick="removeRow('user-row-${i}')">✕</button>`;
+  document.getElementById('users-list').appendChild(row);
+  generate();
+}
+
+function addShare() {
+  const i = shareCount++;
+  const row = document.createElement('div');
+  row.className = 'repeat-row share-row';
+  row.id = `share-row-${i}`;
+  row.innerHTML = `
+    <input type="text" placeholder="sharename"           id="s_name_${i}" oninput="syncSharePath(${i});generate()">
+    <input type="text" placeholder="/smb-data/sharename" id="s_path_${i}" oninput="generate()">
+    <select id="s_mode_${i}" onchange="generate()">
+      <option value="rw">rw</option>
+      <option value="ro">ro</option>
+    </select>
+    <button class="btn-remove" onclick="removeRow('share-row-${i}')">✕</button>`;
+  document.getElementById('shares-list').appendChild(row);
+  generate();
+}
+
+function syncSharePath(i) {
+  const name = document.getElementById(`s_name_${i}`).value.trim();
+  const pathEl = document.getElementById(`s_path_${i}`);
+  // Only auto-fill if user hasn't typed a custom path
+  if (!pathEl.dataset.custom) {
+    pathEl.value = name ? `/smb-data/${name}` : '';
+  }
+}
+
+function addTrust() {
+  const i = trustCount++;
+  const row = document.createElement('div');
+  row.className = 'repeat-row trust-row';
+  row.id = `trust-row-${i}`;
+  row.innerHTML = `
+    <input type="text"     placeholder="CORP.LOCAL"         id="t_realm_${i}"  oninput="generate()">
+    <input type="text"     placeholder="kdc.corp.local"     id="t_kdc_${i}"    oninput="generate()">
+    <input type="password" placeholder="shared secret"      id="t_secret_${i}" oninput="generate()">
+    <select id="t_dir_${i}" onchange="generate()">
+      <option value="one-way">one-way</option>
+      <option value="two-way">two-way</option>
+    </select>
+    <button class="btn-remove" onclick="removeRow('trust-row-${i}')">✕</button>`;
+  document.getElementById('trusts-list').appendChild(row);
+  generate();
+}
+
+function removeRow(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  generate();
+}
+
+// ── Config collection ────────────────────────────────────────────────────
+function collectConfig() {
+  const cfg = {
+    smb_hostname:      v('smb_hostname')     || 'smbserver.smbtest.local',
+    workgroup:         v('workgroup')         || 'SMBTEST',
+    realm:             v('realm')             || 'SMBTEST.LOCAL',
+    kdc_admin_password: v('kdc_admin_password') || 'adminpass',
+    enable_anonymous:  checked('anon'),
+    enable_ntlm:       checked('ntlm'),
+    enable_kerberos:   checked('kerberos'),
+    smb_port:          parseInt(v('smb_port'))  || 445,
+    kdc_port:          parseInt(v('kdc_port'))  || 88,
+    users:  [],
+    shares: [],
+    trusts: [],
+  };
+
+  // Users
+  document.querySelectorAll('[id^="u_name_"]').forEach(el => {
+    const i   = el.id.split('_').pop();
+    const name = el.value.trim();
+    const pass = v(`u_pass_${i}`);
+    if (name && pass) cfg.users.push([name, pass]);
+  });
+
+  // Shares
+  document.querySelectorAll('[id^="s_name_"]').forEach(el => {
+    const i    = el.id.split('_').pop();
+    const name = el.value.trim();
+    const path = v(`s_path_${i}`) || `/smb-data/${name}`;
+    const mode = v(`s_mode_${i}`) || 'rw';
+    if (name) cfg.shares.push([name, path, mode]);
+  });
+
+  // Trusts
+  document.querySelectorAll('[id^="t_realm_"]').forEach(el => {
+    const i      = el.id.split('_').pop();
+    const realm  = el.value.trim();
+    const kdc    = v(`t_kdc_${i}`);
+    const secret = v(`t_secret_${i}`);
+    const dir    = v(`t_dir_${i}`) || 'one-way';
+    if (realm && kdc && secret) cfg.trusts.push([realm, kdc, secret, dir]);
+  });
+
+  return cfg;
+}
+
+function v(id)       { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function checked(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+
+// ── Formatters (mirrors cli/formatters.py) ───────────────────────────────
+const VOLUME = 'smb-mock-keytab';
+const NETWORK = 'smb-mock-net';
+const KDC_CTR = 'smb-mock-kdc';
+const SMB_CTR = 'smb-mock-samba';
+
+function boolStr(b) { return b ? 'true' : 'false'; }
+
+function yamlVal(v) {
+  if (/[:#{}[\]|>&*!,]/.test(v)) return `"${v}"`;
+  return v;
+}
+
+function kdcEnvPairs(cfg) {
+  const p = [
+    ['KRB5_REALM',          cfg.realm],
+    ['KRB5_ADMIN_PASSWORD', cfg.kdc_admin_password],
+    ['SMB_HOSTNAME',        cfg.smb_hostname],
+  ];
+  cfg.users.forEach(([n, pw], i)  => p.push([`SMB_USER_${i}`,  `${n}:${pw}`]));
+  cfg.trusts.forEach(([r, k, s, d], i) => p.push([`SMB_TRUST_${i}`, `${r}:${k}:${s}:${d}`]));
+  return p;
+}
+
+function sambaEnvPairs(cfg) {
+  const p = [
+    ['SMB_HOSTNAME',         cfg.smb_hostname],
+    ['SMB_WORKGROUP',        cfg.workgroup],
+    ['KRB5_REALM',           cfg.realm],
+    ['KDC_HOST',             'kdc'],
+    ['SMB_ENABLE_ANONYMOUS', boolStr(cfg.enable_anonymous)],
+    ['SMB_ENABLE_NTLM',      boolStr(cfg.enable_ntlm)],
+    ['SMB_ENABLE_KERBEROS',  boolStr(cfg.enable_kerberos)],
+  ];
+  cfg.users.forEach(([n, pw], i)        => p.push([`SMB_USER_${i}`,  `${n}:${pw}`]));
+  cfg.shares.forEach(([n, path, m], i)  => p.push([`SMB_SHARE_${i}`, `${n}:${path}:${m}`]));
+  cfg.trusts.forEach(([r, k, s, d], i)  => p.push([`SMB_TRUST_${i}`, `${r}:${k}:${s}:${d}`]));
+  return p;
+}
+
+function toEnvFile(cfg) {
+  const lines = [
+    '# smb-mock configuration — generated by smb-mock wizard',
+    `SMB_HOSTNAME=${cfg.smb_hostname}`,
+    `SMB_WORKGROUP=${cfg.workgroup}`,
+    `KRB5_REALM=${cfg.realm}`,
+    `KRB5_ADMIN_PASSWORD=${cfg.kdc_admin_password}`,
+    `SMB_ENABLE_ANONYMOUS=${boolStr(cfg.enable_anonymous)}`,
+    `SMB_ENABLE_NTLM=${boolStr(cfg.enable_ntlm)}`,
+    `SMB_ENABLE_KERBEROS=${boolStr(cfg.enable_kerberos)}`,
+    `SMB_PORT=${cfg.smb_port}`,
+    `KDC_PORT=${cfg.kdc_port}`,
+  ];
+  cfg.users.forEach(([n, pw], i)       => lines.push(`SMB_USER_${i}=${n}:${pw}`));
+  cfg.shares.forEach(([n, p, m], i)    => lines.push(`SMB_SHARE_${i}=${n}:${p}:${m}`));
+  cfg.trusts.forEach(([r, k, s, d], i) => lines.push(`SMB_TRUST_${i}=${r}:${k}:${s}:${d}`));
+  return lines.join('\n') + '\n';
+}
+
+function toDockerRun(cfg) {
+  function envFlags(pairs) {
+    return pairs.map(([k, v]) => `  -e ${k}=${v}`).join(' \\\n');
+  }
+  const kEnvs = envFlags(kdcEnvPairs(cfg));
+  const sEnvs = envFlags(sambaEnvPairs(cfg));
+  return [
+    '# smb-mock — generated by smb-mock wizard',
+    '',
+    `docker volume create ${VOLUME}`,
+    `docker network create ${NETWORK}`,
+    '',
+    '# ── KDC ──────────────────────────────────────────────────────────────',
+    'docker run -d \\',
+    `  --name ${KDC_CTR} \\`,
+    `  --network ${NETWORK} \\`,
+    '  --network-alias kdc \\',
+    kEnvs + ' \\',
+    `  -p ${cfg.kdc_port}:88/tcp \\`,
+    `  -p ${cfg.kdc_port}:88/udp \\`,
+    '  -p 749:749/tcp \\',
+    `  -v ${VOLUME}:/shared \\`,
+    `  ${KDC_CTR}`,
+    '',
+    '# ── Samba ────────────────────────────────────────────────────────────',
+    'docker run -d \\',
+    `  --name ${SMB_CTR} \\`,
+    `  --network ${NETWORK} \\`,
+    `  --hostname ${cfg.smb_hostname} \\`,
+    sEnvs + ' \\',
+    `  -p ${cfg.smb_port}:445/tcp \\`,
+    `  -v ${VOLUME}:/shared \\`,
+    `  ${SMB_CTR}`,
+  ].join('\n') + '\n';
+}
+
+function toComposeOverride(cfg) {
+  function envBlock(pairs, indent) {
+    return pairs.map(([k, v]) => `${indent}  ${k}: ${yamlVal(v)}`).join('\n');
+  }
+  return [
+    '# smb-mock docker-compose override — generated by smb-mock wizard',
+    'services:',
+    '  kdc:',
+    '    environment:',
+    envBlock(kdcEnvPairs(cfg), '    '),
+    '  samba:',
+    '    environment:',
+    envBlock(sambaEnvPairs(cfg), '    '),
+  ].join('\n') + '\n';
+}
+
+// ── Tabs + generate ──────────────────────────────────────────────────────
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  generate();
+}
+
+const DL_NAMES = { 'env': '.env', 'docker-run': 'smb-mock-run.sh', 'compose-override': 'docker-compose.override.yml' };
+
+function generate() {
+  const cfg  = collectConfig();
+  let text = '';
+  if      (currentTab === 'env')              text = toEnvFile(cfg);
+  else if (currentTab === 'docker-run')       text = toDockerRun(cfg);
+  else if (currentTab === 'compose-override') text = toComposeOverride(cfg);
+
+  document.getElementById('output-pre').textContent = text;
+  document.getElementById('dl-btn').textContent = `Download  ${DL_NAMES[currentTab]}`;
+
+  const notice = document.getElementById('krb-notice');
+  if (cfg.enable_kerberos) {
+    document.getElementById('hosts-hint').textContent = `127.0.0.1  ${cfg.smb_hostname}`;
+    notice.classList.remove('hidden');
+  } else {
+    notice.classList.add('hidden');
+  }
+}
+
+// ── Download / copy ───────────────────────────────────────────────────────
+function downloadOutput() {
+  const text     = document.getElementById('output-pre').textContent;
+  const filename = DL_NAMES[currentTab];
+  const blob     = new Blob([text], { type: 'text/plain' });
+  const a        = document.createElement('a');
+  a.href         = URL.createObjectURL(blob);
+  a.download     = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyOutput() {
+  const text = document.getElementById('output-pre').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+// Add one default user + share so the page isn't empty
+addUser();
+addShare();
+generate();
+</script>
+</body>
+</html>

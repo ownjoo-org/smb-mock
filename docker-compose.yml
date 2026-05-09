@@ -1,0 +1,50 @@
+volumes:
+  keytab:
+
+services:
+
+  # ── Kerberos KDC ──────────────────────────────────────────────────────────
+  kdc:
+    image: speedimusmaximus/smb-mock-kdc:${SMB_MOCK_VERSION:-latest}
+    build:
+      context: docker/kdc
+    hostname: kdc
+    environment:
+      KRB5_REALM:           ${KRB5_REALM:-SMBTEST.LOCAL}
+      KRB5_ADMIN_PASSWORD:  ${KRB5_ADMIN_PASSWORD:-adminpass}
+      SMB_HOSTNAME:         ${SMB_HOSTNAME:-smbserver.smbtest.local}
+      SMB_USER_0:           ${SMB_USER_0:-testuser:testpass}
+      # SMB_USER_1: alice:alicepass   # add more users as needed
+      # SMB_TRUST_0: CORP.EXAMPLE.COM:kdc.corp.example.com:sharedsecret:one-way
+    volumes:
+      - keytab:/shared
+    ports:
+      - "${KDC_PORT:-88}:88/tcp"
+      - "${KDC_PORT:-88}:88/udp"
+      - "749:749/tcp"
+
+  # ── Samba file server ─────────────────────────────────────────────────────
+  samba:
+    image: speedimusmaximus/smb-mock-samba:${SMB_MOCK_VERSION:-latest}
+    build:
+      context: docker/samba
+    hostname: ${SMB_HOSTNAME:-smbserver.smbtest.local}
+    environment:
+      SMB_HOSTNAME:         ${SMB_HOSTNAME:-smbserver.smbtest.local}
+      SMB_WORKGROUP:        ${SMB_WORKGROUP:-SMBTEST}
+      KRB5_REALM:           ${KRB5_REALM:-SMBTEST.LOCAL}
+      KDC_HOST:             kdc
+      SMB_ENABLE_ANONYMOUS: ${SMB_ENABLE_ANONYMOUS:-true}
+      SMB_ENABLE_NTLM:      ${SMB_ENABLE_NTLM:-true}
+      SMB_ENABLE_KERBEROS:  ${SMB_ENABLE_KERBEROS:-true}
+      SMB_USER_0:           ${SMB_USER_0:-testuser:testpass}
+      SMB_SHARE_0:          ${SMB_SHARE_0:-testshare:/smb-data/testshare:rw}
+      SMB_SHARE_1:          ${SMB_SHARE_1:-readonly:/smb-data/readonly:ro}
+      # SMB_TRUST_0: CORP.EXAMPLE.COM:kdc.corp.example.com:sharedsecret:one-way
+    volumes:
+      - keytab:/shared
+    ports:
+      - "${SMB_PORT:-445}:445/tcp"
+    depends_on:
+      kdc:
+        condition: service_healthy
