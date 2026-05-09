@@ -99,6 +99,9 @@ def main() -> None:
     print("\n==> Creating share directories", flush=True)
     for share in config.shares:
         os.makedirs(share.path, exist_ok=True)
+        # smbd impersonates the connecting user at the OS level, so the
+        # directory must be world-traversable.  Access control is enforced
+        # by smb.conf (read only, valid users, guest ok) not by Unix perms.
         os.chmod(share.path, 0o777)
         print(f"  {share.path}", flush=True)
 

@@ -129,15 +129,20 @@ def generate_smb_conf(config: SambaConfig) -> str:
     netbios = _netbios_name(config.hostname)
     ntlm = "ntlmv2-only" if config.enable_ntlm else "no"
 
+    # Signing: mandatory when no anonymous access (prevents MITM downgrade);
+    # auto when anonymous is enabled (guest sessions cannot sign).
+    signing = "auto" if config.enable_anonymous else "mandatory"
+
     lines = [
         "[global]",
         f"    netbios name = {netbios}",
-        "    server string = SMB Mock Server",
+        "    server string =",          # blank — do not leak software identity
         f"    workgroup = {config.workgroup}",
         f"    realm = {config.krb5_realm}",
         "",
         "    server min protocol = SMB2",
         "    server max protocol = SMB3",
+        f"    server signing = {signing}",
         "",
         "    security = user",
         f"    ntlm auth = {ntlm}",
@@ -156,6 +161,12 @@ def generate_smb_conf(config: SambaConfig) -> str:
             "    map to guest = bad user",
             "    guest account = nobody",
         ]
+    else:
+        # Refuse unauthenticated info queries (workgroup, NetBIOS name lookups)
+        lines += [
+            "",
+            "    restrict anonymous = 2",
+        ]
 
     lines += [
         "",
@@ -168,24 +179,31 @@ def generate_smb_conf(config: SambaConfig) -> str:
         "    printcap name = /dev/null",
         "    disable spoolss = yes",
         "",
-        "    log level = 1",
+        "    log level = 0",
         "    log file = /var/log/samba/log.%m",
         "    max log size = 50",
     ]
 
+    user_names = [u.name for u in config.users] if config.users else None
+
     for share in config.shares:
         read_only = "Yes" if share.readonly else "No"
         guest_ok = "Yes" if config.enable_anonymous else "No"
+        create_mask = "0664"
+        dir_mask    = "0775"
         lines += [
             "",
             f"[{share.name}]",
             f"    path = {share.path}",
             f"    read only = {read_only}",
-            "    browseable = Yes",
+            "    browseable = No",
             f"    guest ok = {guest_ok}",
-            "    create mask = 0664",
-            "    directory mask = 0775",
+            f"    create mask = {create_mask}",
+            f"    directory mask = {dir_mask}",
         ]
+        # Restrict non-public shares to explicitly provisioned users
+        if not config.enable_anonymous and user_names:
+            lines.append(f"    valid users = {' '.join(user_names)}")
 
     return "\n".join(lines) + "\n"
 

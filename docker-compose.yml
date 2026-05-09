@@ -21,7 +21,20 @@ services:
     ports:
       - "${KDC_PORT:-88}:88/tcp"
       - "${KDC_PORT:-88}:88/udp"
-      - "749:749/tcp"
+    # 749 (kadmind) intentionally NOT exposed — stays inside Docker network only
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE   # krb5kdc needs port 88
+      - CHOWN              # entrypoint owns /shared
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE       # write config files
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
 
   # ── Samba file server ─────────────────────────────────────────────────────
   samba:
@@ -45,6 +58,19 @@ services:
       - keytab:/shared
     ports:
       - "${SMB_PORT:-445}:445/tcp"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE   # smbd needs port 445
+      - CHOWN              # entrypoint creates users / sets ownership
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE       # write config files, set passwords
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 512M
     depends_on:
       kdc:
         condition: service_healthy

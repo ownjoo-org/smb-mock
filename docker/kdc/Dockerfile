@@ -11,9 +11,9 @@ WORKDIR /app
 
 VOLUME ["/shared"]
 
+# 88 only — kadmind (749) stays inside the Docker network, never exposed on host
 EXPOSE 88/tcp
 EXPOSE 88/udp
-EXPOSE 749/tcp
 
 # Healthy once the service keytab has been written (proves full init complete).
 HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=24 \

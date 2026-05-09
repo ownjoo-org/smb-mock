@@ -79,9 +79,11 @@ def main() -> None:
 
     print(f"\n==> Keytab written to {KEYTAB_PATH}", flush=True)
 
-    print("\n==> Starting kadmind (background)", flush=True)
+    # kadmind is only needed inside the Docker network (keytab handoff).
+    # Both stdout and stderr are suppressed — it has no external port exposure.
+    print("\n==> Starting kadmind (background, internal only)", flush=True)
     subprocess.Popen(["kadmind", "-nofork"],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     print("==> Exec krb5kdc (foreground / PID 1)", flush=True)
     os.execvp("krb5kdc", ["krb5kdc", "-n"])
