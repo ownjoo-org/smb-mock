@@ -56,6 +56,7 @@ services:
       SMB_USER_0:           ${SMB_USER_0:-testuser:testpass}
       SMB_SHARE_0:          ${SMB_SHARE_0:-testshare:/smb-data/testshare:rw}
       SMB_SHARE_1:          ${SMB_SHARE_1:-readonly:/smb-data/readonly:ro}
+      SMB_LOG_LEVEL:        ${SMB_LOG_LEVEL:-0}
       # SMB_TRUST_0: CORP.EXAMPLE.COM:kdc.corp.example.com:sharedsecret:one-way
     volumes:
       - keytab:/shared
