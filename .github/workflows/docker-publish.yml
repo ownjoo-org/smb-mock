@@ -66,6 +66,13 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac  # v3
 
+      - name: Log cosign into Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
+            cosign login index.docker.io \
+              --username "${{ secrets.DOCKERHUB_USERNAME }}" \
+              --password-stdin
+
       - name: Sign image (keyless via GitHub OIDC)
         run: |
           cosign sign --yes "${{ matrix.image }}@${{ steps.build.outputs.digest }}"
