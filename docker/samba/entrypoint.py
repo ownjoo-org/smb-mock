@@ -73,7 +73,7 @@ def _write_username_map_script() -> None:
         'echo "${1%%@*}"\n'
     )
     _write(USERNAME_MAP_SCRIPT, script)
-    os.chmod(USERNAME_MAP_SCRIPT, 0o755)
+    os.chmod(USERNAME_MAP_SCRIPT, 0o700)  # executed by smbd (root); no other user needs access
 
 
 def main() -> None:
@@ -102,7 +102,7 @@ def main() -> None:
         # smbd impersonates the connecting user at the OS level, so the
         # directory must be world-traversable.  Access control is enforced
         # by smb.conf (read only, valid users, guest ok) not by Unix perms.
-        os.chmod(share.path, 0o777)
+        os.chmod(share.path, 0o777)  # nosec B103 — intentional; Samba enforces ACLs at the protocol layer
         print(f"  {share.path}", flush=True)
 
     print("\n==> Creating Samba users", flush=True)
