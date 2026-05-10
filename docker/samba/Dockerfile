@@ -1,5 +1,7 @@
+# hadolint ignore=DL3006
 FROM cgr.dev/chainguard/wolfi-base
 
+# hadolint ignore=DL3018,SC2015
 RUN apk add --no-cache \
         python-3.12 \
         samba \
