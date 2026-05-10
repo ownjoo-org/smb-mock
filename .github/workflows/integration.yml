@@ -32,8 +32,6 @@ jobs:
         env:
           SMB_PORT: "4450"
           KDC_PORT: "8800"
-          SMB_LOG_LEVEL: "3"
-          SMB_MAX_LOG_SIZE: "5000"
 
       - name: Wait for stack to be healthy
         run: |
@@ -79,18 +77,9 @@ jobs:
         run: |
           docker compose logs kdc
           docker compose logs samba
-          echo "=== Samba keytab contents ==="
-          docker exec smb-mock-samba-1 klist -k -e /etc/krb5.keytab || true
-          echo "=== Samba smb.conf ==="
-          docker exec smb-mock-samba-1 cat /etc/samba/smb.conf || true
-          echo "=== /var/log/samba/ contents ==="
-          docker exec smb-mock-samba-1 ls /var/log/samba/ || true
-          echo "=== all samba logs ==="
-          docker exec smb-mock-samba-1 sh -c 'for f in /var/log/samba/log.*; do echo "--- $f ---"; cat "$f"; done' || echo "(no samba log files)"
         env:
           SMB_PORT: "4450"
           KDC_PORT: "8800"
-          SMB_LOG_LEVEL: "3"
 
       - name: Tear down stack
         if: always()
