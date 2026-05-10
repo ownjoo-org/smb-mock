@@ -45,7 +45,9 @@ jobs:
         with:
           dockerfile: ${{ matrix.dockerfile }}
           failure-threshold: warning
-          config: .hadolint.yaml
+          # DL3006/DL3018: wolfi-base is a rolling distro (no version tags, no pinned APK versions)
+          # SC2015: || true on find setuid cleanup is intentional (not an if-then-else error)
+          ignore: DL3006 DL3018 SC2015
 
   checkov:
     runs-on: ubuntu-latest
