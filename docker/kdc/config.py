@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-KEYTAB_PATH = "/shared/krb5.keytab"
+KEYTAB_PATH = os.environ.get("KDC_KEYTAB_PATH", "/shared/krb5.keytab")
 
 
 @dataclass

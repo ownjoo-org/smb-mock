@@ -9,14 +9,15 @@ RUN apk add --no-cache \
 COPY config.py entrypoint.py /app/
 WORKDIR /app
 
-VOLUME ["/shared"]
-
-# 88 only — kadmind (749) stays inside the Docker network, never exposed on host
+# 88  — KDC ticket service
+# 8088 — keytab HTTP API (GET /keytab, GET /healthz)
+# 749 (kadmind) intentionally NOT exposed — stays inside Docker network only
 EXPOSE 88/tcp
 EXPOSE 88/udp
+EXPOSE 8088/tcp
 
-# Healthy once the service keytab has been written (proves full init complete).
+# Healthy once the HTTP server responds — proves keytab is written and served.
 HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=24 \
-    CMD test -f /shared/krb5.keytab
+    CMD wget -qO- http://localhost:8088/healthz || exit 1
 
 CMD ["python3", "entrypoint.py"]

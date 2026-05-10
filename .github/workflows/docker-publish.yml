@@ -15,7 +15,7 @@ jobs:
         include:
           - service: kdc
             context: docker/kdc
-            image: speedimusmaximus/smb-mock-kdc
+            image: speedimusmaximus/mock-kdc
           - service: samba
             context: docker/samba
             image: speedimusmaximus/smb-mock-samba

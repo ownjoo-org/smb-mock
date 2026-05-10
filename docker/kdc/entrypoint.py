@@ -5,9 +5,12 @@ Writes Kerberos config files, initialises the principal database,
 creates all required principals and exports the Samba service keytab,
 then execs krb5kdc in the foreground (PID 1).
 """
+import base64
 import os
 import subprocess
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from config import (
     KEYTAB_PATH,
@@ -20,8 +23,39 @@ from config import (
 )
 
 KRB5_CONF = "/etc/krb5.conf"
+KEYTAB_HTTP_PORT = int(os.environ.get("KDC_HTTP_PORT", "8088"))
 KDC_CONF = "/etc/krb5kdc/kdc.conf"
 KADM5_ACL = "/etc/krb5kdc/kadm5.acl"
+
+
+def _start_keytab_server(keytab_path: str, port: int) -> None:
+    """Serve the keytab over HTTP so consumers don't need a shared volume."""
+    keytab_bytes = open(keytab_path, "rb").read()
+
+    class _Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass  # silence per-request access log
+
+        def do_GET(self):
+            if self.path == "/keytab":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Length", str(len(keytab_bytes)))
+                self.end_headers()
+                self.wfile.write(keytab_bytes)
+            elif self.path == "/healthz":
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"ok")
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+    threading.Thread(
+        target=HTTPServer(("", port), _Handler).serve_forever,
+        daemon=True,
+    ).start()
+    print(f"  keytab HTTP server listening on :{port}", flush=True)
 
 
 def _write(path: str, content: str) -> None:
@@ -78,6 +112,11 @@ def main() -> None:
         _kadmin(cmd)
 
     print(f"\n==> Keytab written to {KEYTAB_PATH}", flush=True)
+
+    b64 = base64.b64encode(open(KEYTAB_PATH, "rb").read()).decode()
+    print(f"KEYTAB_B64:{b64}", flush=True)
+
+    _start_keytab_server(KEYTAB_PATH, KEYTAB_HTTP_PORT)
 
     # kadmind is only needed inside the Docker network (keytab handoff).
     # Both stdout and stderr are suppressed — it has no external port exposure.

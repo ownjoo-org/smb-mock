@@ -13,6 +13,31 @@ from kdc.config import (
 )
 
 
+class TestKeytabPath(unittest.TestCase):
+    def test_default_keytab_path(self):
+        import kdc.config as kdc_config
+        import importlib, os
+        env_backup = os.environ.pop("KDC_KEYTAB_PATH", None)
+        try:
+            importlib.reload(kdc_config)
+            self.assertEqual(kdc_config.KEYTAB_PATH, "/shared/krb5.keytab")
+        finally:
+            if env_backup is not None:
+                os.environ["KDC_KEYTAB_PATH"] = env_backup
+            importlib.reload(kdc_config)
+
+    def test_custom_keytab_path_from_env(self):
+        import kdc.config as kdc_config
+        import importlib, os
+        os.environ["KDC_KEYTAB_PATH"] = "/tmp/custom.keytab"
+        try:
+            importlib.reload(kdc_config)
+            self.assertEqual(kdc_config.KEYTAB_PATH, "/tmp/custom.keytab")
+        finally:
+            del os.environ["KDC_KEYTAB_PATH"]
+            importlib.reload(kdc_config)
+
+
 class TestKdcLoadConfigFromEnv(unittest.TestCase):
     def test_defaults(self):
         config = load_config_from_env({})

@@ -5,7 +5,7 @@ services:
 
   # ── Kerberos KDC ──────────────────────────────────────────────────────────
   kdc:
-    image: speedimusmaximus/smb-mock-kdc:${SMB_MOCK_VERSION:-latest}
+    image: speedimusmaximus/mock-kdc:${SMB_MOCK_VERSION:-latest}
     build:
       context: docker/kdc
     hostname: kdc

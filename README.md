@@ -13,9 +13,9 @@ docker compose up
 
 This starts two containers:
 
-| Container | Role | Port |
-|-----------|------|------|
-| `smb-mock-kdc` | MIT Kerberos KDC — issues tickets, writes keytab | 88/tcp+udp |
+| Container | Role | Ports |
+|-----------|------|-------|
+| `mock-kdc` | MIT Kerberos KDC — issues tickets, writes keytab | 88/tcp+udp, 8088/tcp (keytab HTTP API) |
 | `smb-mock-samba` | Samba smbd — serves SMB2/3 shares | 445/tcp |
 
 Samba waits for the KDC healthcheck before starting, so the stack is ready when `docker compose up` returns.
@@ -71,7 +71,28 @@ KRB5_ADMIN_PASSWORD=adminpass
 ```
 SMB_PORT=445      # host port → container 445
 KDC_PORT=88       # host port → container 88
+KDC_HTTP_PORT=8088  # keytab HTTP API port (default 8088)
+KDC_KEYTAB_PATH=/shared/krb5.keytab  # path inside container where keytab is written
 ```
+
+## KDC keytab HTTP API
+
+The KDC container (`speedimusmaximus/mock-kdc`) exposes a lightweight HTTP server on port 8088 so consumers can retrieve the keytab without a shared Docker volume:
+
+```
+GET http://<kdc-host>:8088/keytab   →  raw keytab bytes (application/octet-stream)
+GET http://<kdc-host>:8088/healthz  →  200 ok once keytab is ready
+```
+
+The keytab is also emitted as a base64-encoded line in container stdout at startup:
+
+```
+KEYTAB_B64:<base64-encoded-keytab>
+```
+
+This lets consumers that cannot reach the HTTP endpoint parse `docker logs` instead.
+
+The `/shared` directory inside the container is a conventional mount point (not a declared `VOLUME`) — you can mount it or ignore it and use the HTTP API instead.
 
 ### Wizards
 

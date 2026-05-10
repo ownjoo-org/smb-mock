@@ -86,7 +86,7 @@ Integration tests obtain Kerberos tickets via `docker exec` into the KDC contain
 ### CI / publishing
 
 - `ci.yml` — unit tests + Bandit + Hadolint on every push/PR
-- `docker-publish.yml` — builds and pushes `speedimusmaximus/smb-mock-kdc` and `speedimusmaximus/smb-mock-samba` to Docker Hub on `main` push or `v*` tag
+- `docker-publish.yml` — builds and pushes `speedimusmaximus/mock-kdc` and `speedimusmaximus/smb-mock-samba` to Docker Hub on `main` push or `v*` tag
 - `codeql.yml` — GitHub SAST, weekly + push/PR to main
 - `trivy.yml` — CVE scan of both images, SARIF → GitHub Security tab
 
