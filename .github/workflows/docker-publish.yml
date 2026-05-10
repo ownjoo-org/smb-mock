@@ -90,39 +90,3 @@ jobs:
           subject-name: ${{ matrix.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
-
-      - name: Sync README to Docker Hub
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, urllib.request, urllib.error
-
-          username = os.environ["DOCKERHUB_USERNAME"]
-          password = os.environ["DOCKERHUB_TOKEN"]
-          image    = os.environ["IMAGE"]
-
-          # authenticate
-          payload = json.dumps({"username": username, "password": password}).encode()
-          req = urllib.request.Request(
-              "https://hub.docker.com/v2/users/login",
-              data=payload,
-              headers={"Content-Type": "application/json"},
-          )
-          token = json.loads(urllib.request.urlopen(req).read())["token"]
-
-          # update full_description
-          repo = image.split("/", 1)[1]  # speedimusmaximus/mock-kdc → mock-kdc
-          full_desc = open("README.md", encoding="utf-8").read()
-          patch = json.dumps({"full_description": full_desc}).encode()
-          req2 = urllib.request.Request(
-              f"https://hub.docker.com/v2/repositories/{image}/",
-              data=patch,
-              headers={"Content-Type": "application/json", "Authorization": f"JWT {token}"},
-              method="PATCH",
-          )
-          urllib.request.urlopen(req2)
-          print(f"Docker Hub description updated for {image}")
-          PYEOF
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          IMAGE: ${{ matrix.image }}

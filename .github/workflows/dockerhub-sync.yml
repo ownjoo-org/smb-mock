@@ -1,0 +1,53 @@
+name: Sync README to Docker Hub
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "README.md"
+  workflow_dispatch:  # manual trigger from GitHub Actions UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - speedimusmaximus/mock-kdc
+          - speedimusmaximus/mock-smb
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Push README to Docker Hub — ${{ matrix.image }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
+
+          username = os.environ["DOCKERHUB_USERNAME"]
+          password = os.environ["DOCKERHUB_TOKEN"]
+          image    = os.environ["IMAGE"]
+
+          payload = json.dumps({"username": username, "password": password}).encode()
+          req = urllib.request.Request(
+              "https://hub.docker.com/v2/users/login",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+          )
+          token = json.loads(urllib.request.urlopen(req).read())["token"]
+
+          full_desc = open("README.md", encoding="utf-8").read()
+          patch = json.dumps({"full_description": full_desc}).encode()
+          req2 = urllib.request.Request(
+              f"https://hub.docker.com/v2/repositories/{image}/",
+              data=patch,
+              headers={"Content-Type": "application/json", "Authorization": f"JWT {token}"},
+              method="PATCH",
+          )
+          urllib.request.urlopen(req2)
+          print(f"Docker Hub description updated for {image}")
+          PYEOF
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          IMAGE: ${{ matrix.image }}
