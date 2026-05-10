@@ -17,8 +17,12 @@ EXPOSE 88/tcp
 EXPOSE 88/udp
 EXPOSE 8088/tcp
 
-# Healthy once the HTTP server responds — proves keytab is written and served.
-HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=24 \
-    CMD wget -qO- http://localhost:8088/healthz || exit 1
+# Healthy once krb5kdc is accepting connections on port 88.
+# The keytab is written to /shared BEFORE os.execvp(krb5kdc) is called, so
+# port-88 reachability implies the keytab is already on the shared volume.
+# (The prior /healthz approach broke because os.execvp replaces the Python
+# process, killing the HTTP-server daemon thread.)
+HEALTHCHECK --interval=5s --timeout=4s --start-period=45s --retries=15 \
+    CMD python3.12 -c "import socket; socket.create_connection(('localhost',88),3).close()" || exit 1
 
 CMD ["python3.12", "entrypoint.py"]

@@ -58,7 +58,10 @@ jobs:
           framework: dockerfile,yaml
           soft_fail: false
           output_format: cli
-          skip_check: CKV_DOCKER_2  # HEALTHCHECK already present; false positive on wolfi-base
+          # CKV_DOCKER_2: HEALTHCHECK already present; false positive on wolfi-base
+          # CKV_DOCKER_3: krb5kdc and smbd are system daemons that require root; USER instruction not viable
+          # CKV_DOCKER_7: cgr.dev/chainguard/wolfi-base is rolling; Chainguard's own guidance is to use :latest and rely on daily CVE rebuilds
+          skip_check: CKV_DOCKER_2,CKV_DOCKER_3,CKV_DOCKER_7
 
   dockle:
     runs-on: ubuntu-latest
