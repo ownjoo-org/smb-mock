@@ -32,6 +32,7 @@ jobs:
         env:
           SMB_PORT: "4450"
           KDC_PORT: "8800"
+          SMB_LOG_LEVEL: "3"
 
       - name: Wait for stack to be healthy
         run: |
@@ -54,9 +55,14 @@ jobs:
         run: |
           docker compose logs kdc
           docker compose logs samba
+          echo "=== /var/log/samba/ contents ==="
+          docker exec smb-mock-samba-1 ls /var/log/samba/ || true
+          echo "=== smbd log ==="
+          docker exec smb-mock-samba-1 sh -c 'cat /var/log/samba/log.smbd 2>/dev/null || cat /var/log/samba/log.* 2>/dev/null || echo "(no samba log files)"'
         env:
           SMB_PORT: "4450"
           KDC_PORT: "8800"
+          SMB_LOG_LEVEL: "3"
 
       - name: Tear down stack
         if: always()
