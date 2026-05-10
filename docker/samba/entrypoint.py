@@ -69,8 +69,12 @@ def _create_user(name: str, password: str) -> None:
 def _write_username_map_script() -> None:
     script = (
         "#!/bin/sh\n"
-        "# Strip @REALM suffix so cross-realm principals map to local users.\n"
-        'echo "${1%%@*}"\n'
+        "# Normalise Kerberos principal names to bare usernames.\n"
+        "# Samba calls this script twice for Kerberos auth:\n"
+        "#   1st pass: 'testuser@SMBTEST.LOCAL'  → strip @REALM  → 'testuser'\n"
+        "#   2nd pass: 'SMBTEST\\testuser'        → strip DOMAIN\\ → 'testuser'\n"
+        'user="${1%%@*}"\n'          # strip @REALM suffix (no-op if absent)
+        'printf \'%s\\n\' "${user##*\\\\}"\n'  # strip DOMAIN\ prefix (no-op if absent)
     )
     _write(USERNAME_MAP_SCRIPT, script)
     os.chmod(USERNAME_MAP_SCRIPT, 0o700)  # executed by smbd (root); no other user needs access
