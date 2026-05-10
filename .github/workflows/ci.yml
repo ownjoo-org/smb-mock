@@ -16,6 +16,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Kerberos system libraries
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libkrb5-dev
+
       - name: Install test dependencies
         run: pip install -r requirements-test.txt
 
