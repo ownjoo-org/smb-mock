@@ -38,7 +38,7 @@ services:
 
   # ── Samba file server ─────────────────────────────────────────────────────
   samba:
-    image: speedimusmaximus/smb-mock-samba:${SMB_MOCK_VERSION:-latest}
+    image: speedimusmaximus/mock-smb:${SMB_MOCK_VERSION:-latest}
     build:
       context: docker/samba
     hostname: ${SMB_HOSTNAME:-smbserver.smbtest.local}

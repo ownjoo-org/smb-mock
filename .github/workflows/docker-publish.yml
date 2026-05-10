@@ -18,7 +18,7 @@ jobs:
             image: speedimusmaximus/mock-kdc
           - service: samba
             context: docker/samba
-            image: speedimusmaximus/smb-mock-samba
+            image: speedimusmaximus/mock-smb
 
     steps:
       - name: Checkout

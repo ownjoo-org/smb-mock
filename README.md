@@ -16,7 +16,7 @@ This starts two containers:
 | Container | Role | Ports |
 |-----------|------|-------|
 | `mock-kdc` | MIT Kerberos KDC — issues tickets, writes keytab | 88/tcp+udp, 8088/tcp (keytab HTTP API) |
-| `smb-mock-samba` | Samba smbd — serves SMB2/3 shares | 445/tcp |
+| `mock-smb` | Samba smbd — serves SMB2/3 shares | 445/tcp |
 
 Samba waits for the KDC healthcheck before starting, so the stack is ready when `docker compose up` returns.
 
