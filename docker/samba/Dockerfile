@@ -1,7 +1,7 @@
-FROM alpine:3.20
+FROM cgr.dev/chainguard/wolfi-base
 
 RUN apk add --no-cache \
-        python3 \
+        python-3.12 \
         samba \
         samba-common-tools \
         krb5 \
@@ -14,4 +14,4 @@ VOLUME ["/smb-data"]
 
 EXPOSE 445/tcp
 
-CMD ["python3", "entrypoint.py"]
+CMD ["python3.12", "entrypoint.py"]

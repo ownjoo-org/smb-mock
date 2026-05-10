@@ -1,7 +1,7 @@
-FROM alpine:3.20
+FROM cgr.dev/chainguard/wolfi-base
 
 RUN apk add --no-cache \
-        python3 \
+        python-3.12 \
         krb5 \
         krb5-server \
     && mkdir -p /var/lib/krb5kdc /etc/krb5kdc /shared
@@ -20,4 +20,4 @@ EXPOSE 8088/tcp
 HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=24 \
     CMD wget -qO- http://localhost:8088/healthz || exit 1
 
-CMD ["python3", "entrypoint.py"]
+CMD ["python3.12", "entrypoint.py"]
