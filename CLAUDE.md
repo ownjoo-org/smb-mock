@@ -81,7 +81,12 @@ Key behaviours baked into `generate_smb_conf`:
 
 ### Kerberos test approach
 
-Integration tests obtain Kerberos tickets via `docker exec` into the KDC container (no local `kinit` needed), then `docker cp` the ccache out. See `tests/integration/test_kerberos.py`.
+`tests/integration/test_kerberos.py` uses `unittest.TestCase` (not bare pytest functions) because pytest fixtures are unreliable for Kerberos setup/teardown sequencing. The class skips automatically if either prerequisite is missing:
+
+1. `smbserver.smbtest.local` must resolve — add `127.0.0.1  smbserver.smbtest.local` to `/etc/hosts`.
+2. KDC must be reachable — checked via a socket connect to `KDC_HOST_MAPPED:KDC_PORT` (defaults `127.0.0.1:88`). Uses IP so no DNS/hosts entry needed for the KDC.
+
+Ticket acquisition: prefers host `kinit` (so ccache uses the native GSSAPI library), falls back to `docker exec` into the KDC container and `docker cp` the ccache out.
 
 ### CI / publishing
 
