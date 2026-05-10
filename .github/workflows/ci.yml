@@ -45,6 +45,7 @@ jobs:
         with:
           dockerfile: ${{ matrix.dockerfile }}
           failure-threshold: warning
+          config: .hadolint.yaml
 
   checkov:
     runs-on: ubuntu-latest
