@@ -4,7 +4,8 @@ RUN apk add --no-cache \
         python-3.12 \
         krb5 \
         krb5-server \
-    && mkdir -p /var/lib/krb5kdc /etc/krb5kdc /shared
+    && mkdir -p /var/lib/krb5kdc /etc/krb5kdc /shared \
+    && find / -perm /6000 -type f -exec chmod a-s {} \; 2>/dev/null || true
 
 COPY config.py entrypoint.py /app/
 WORKDIR /app
