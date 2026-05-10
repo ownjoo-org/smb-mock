@@ -137,7 +137,8 @@ def krb5_conf_path(tmp_path_factory) -> str:
         "\n"
         "[realms]\n"
         f"    {KRB5_REALM} = {{\n"
-        f"        kdc = {KDC_HOST_MAPPED}:{KDC_PORT}\n"
+        # tcp/ prefix forces TCP; UDP may be blocked in CI/container environments.
+        f"        kdc = tcp/{KDC_HOST_MAPPED}:{KDC_PORT}\n"
         "    }\n"
         "\n"
         "[domain_realm]\n"

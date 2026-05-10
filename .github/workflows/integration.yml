@@ -33,6 +33,7 @@ jobs:
           SMB_PORT: "4450"
           KDC_PORT: "8800"
           SMB_LOG_LEVEL: "3"
+          SMB_MAX_LOG_SIZE: "5000"
 
       - name: Wait for stack to be healthy
         run: |
