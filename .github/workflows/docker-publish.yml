@@ -96,4 +96,4 @@ jobs:
         with:
           subject-name: ${{ matrix.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
+          push-to-registry: false  # attestation lives in GitHub's store; verifiable via gh attestation verify
