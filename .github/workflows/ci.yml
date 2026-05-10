@@ -55,7 +55,7 @@ jobs:
         uses: bridgecrewio/checkov-action@4048c972aae68d0b983a48bb3479aab2d877b898  # v12
         with:
           directory: .
-          framework: dockerfile,docker_compose
+          framework: dockerfile,yaml
           soft_fail: false
           output_format: cli
           skip_check: CKV_DOCKER_2  # HEALTHCHECK already present; false positive on wolfi-base
