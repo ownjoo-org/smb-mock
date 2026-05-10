@@ -129,6 +129,11 @@ def krb5_conf_path(tmp_path_factory) -> str:
         f"    default_realm = {KRB5_REALM}\n"
         "    dns_lookup_realm = false\n"
         "    dns_lookup_kdc = false\n"
+        # rdns=false: GSSAPI must not reverse-resolve 127.0.0.1→localhost
+        # when canonicalizing the cifs/smbserver.smbtest.local SPN.
+        # dns_canonicalize_hostname=false: use the hostname as supplied.
+        "    rdns = false\n"
+        "    dns_canonicalize_hostname = false\n"
         "\n"
         "[realms]\n"
         f"    {KRB5_REALM} = {{\n"
