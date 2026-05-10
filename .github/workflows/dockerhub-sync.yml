@@ -12,42 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image:
-          - speedimusmaximus/mock-kdc
-          - speedimusmaximus/mock-smb
+        include:
+          - image: speedimusmaximus/mock-kdc
+            short_desc: "MIT Kerberos KDC for SMB/CIFS integration testing — no Windows DC required"
+          - image: speedimusmaximus/mock-smb
+            short_desc: "Samba SMB2/3 file server for integration testing — pairs with mock-kdc"
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Push README to Docker Hub — ${{ matrix.image }}
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, urllib.request
-
-          username = os.environ["DOCKERHUB_USERNAME"]
-          password = os.environ["DOCKERHUB_TOKEN"]
-          image    = os.environ["IMAGE"]
-
-          payload = json.dumps({"username": username, "password": password}).encode()
-          req = urllib.request.Request(
-              "https://hub.docker.com/v2/users/login",
-              data=payload,
-              headers={"Content-Type": "application/json"},
-          )
-          token = json.loads(urllib.request.urlopen(req).read())["token"]
-
-          full_desc = open("README.md", encoding="utf-8").read()
-          patch = json.dumps({"full_description": full_desc}).encode()
-          req2 = urllib.request.Request(
-              f"https://hub.docker.com/v2/repositories/{image}/",
-              data=patch,
-              headers={"Content-Type": "application/json", "Authorization": f"JWT {token}"},
-              method="PATCH",
-          )
-          urllib.request.urlopen(req2)
-          print(f"Docker Hub description updated for {image}")
-          PYEOF
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          IMAGE: ${{ matrix.image }}
+        uses: peter-evans/dockerhub-description@dc67fad7001ef9e8e3c124cb7a64e16d0a63d864  # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ matrix.image }}
+          short-description: ${{ matrix.short_desc }}
+          readme-filepath: ./README.md
