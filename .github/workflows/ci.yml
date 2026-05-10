@@ -42,3 +42,46 @@ jobs:
         with:
           dockerfile: ${{ matrix.dockerfile }}
           failure-threshold: warning
+
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkov — IaC security scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: dockerfile,docker_compose
+          soft_fail: false
+          output_format: cli
+          skip_check: CKV_DOCKER_2  # HEALTHCHECK already present; false positive on wolfi-base
+
+  dockle:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: kdc
+            context: docker/kdc
+          - service: samba
+            context: docker/samba
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          load: true
+          tags: smb-mock-${{ matrix.service }}:dockle
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Dockle — CIS benchmark lint (${{ matrix.service }})
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/goodwithtech/dockle/releases/latest | grep '"tag_name":' | cut -d'"' -f4 | sed 's/v//')
+          curl -sSL "https://github.com/goodwithtech/dockle/releases/download/v${VERSION}/dockle_${VERSION}_Linux-64bit.tar.gz" | tar -xz
+          ./dockle --exit-code 1 --exit-level warn smb-mock-${{ matrix.service }}:dockle
