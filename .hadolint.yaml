@@ -1,0 +1,16 @@
+# Hadolint configuration
+# https://github.com/hadolint/hadolint#configure
+
+ignore:
+  # cgr.dev/chainguard/wolfi-base is a rolling distro with no semver tags.
+  # Chainguard's own guidance is to use :latest and rely on daily CVE rebuilds.
+  - DL3006
+
+  # Wolfi APK packages don't publish pinned release versions; version pinning
+  # in apk add is not applicable here (same reason as DL3006 above).
+  - DL3018
+
+  # The setuid-cleanup pattern (find … 2>/dev/null || true) uses || true
+  # intentionally to ensure the layer always exits 0 even when no setuid
+  # files are present.  This is not a logic error.
+  - SC2015
