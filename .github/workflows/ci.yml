@@ -23,7 +23,7 @@ jobs:
         run: |
           python -m pytest tests/unit/ -q \
             --cov=docker/kdc --cov=docker/samba --cov=cli \
-            --cov-report=term-missing --cov-fail-under=70
+            --cov-report=term-missing
 
       - name: Bandit — Python security linter
         run: |

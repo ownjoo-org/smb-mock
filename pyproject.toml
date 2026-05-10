@@ -19,3 +19,17 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["docker"]
+
+[tool.coverage.run]
+# entrypoint.py files exec system daemons (krb5kdc, smbd) — not unit-testable
+# cli/wizard.py is a Click CLI entry point — not unit-testable
+omit = [
+    "docker/kdc/entrypoint.py",
+    "docker/samba/entrypoint.py",
+    "cli/wizard.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+# config.py files (the testable surface) run at 95-98%; 90 is a safe gate
+fail_under = 90
