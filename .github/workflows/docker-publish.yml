@@ -10,6 +10,11 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write       # attach SBOM to GitHub releases on tags
+      id-token: write       # keyless cosign OIDC signing
+      attestations: write   # GitHub build provenance attestations
+
     strategy:
       matrix:
         include:
@@ -47,6 +52,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push ${{ matrix.service }}
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -56,3 +62,31 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless via GitHub OIDC)
+        run: |
+          cosign sign --yes "${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          artifact-name: sbom-${{ matrix.service }}.spdx.json
+          output-file: /tmp/sbom-${{ matrix.service }}.spdx.json
+          upload-release-assets: ${{ startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Attach SBOM to image as OCI artifact
+        run: |
+          cosign attach sbom \
+            --sbom /tmp/sbom-${{ matrix.service }}.spdx.json \
+            "${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: GitHub build provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ matrix.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

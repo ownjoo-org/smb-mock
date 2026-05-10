@@ -215,6 +215,34 @@ Automated scanning does not replace a full security assessment. The following ar
 >
 > Before exposing any port of this stack to a network, review the [Security notes](#security-notes) section and apply mitigations appropriate to your environment.
 
+## Supply chain security
+
+All published images are signed and have an attached SBOM.
+
+### Verify image signature (cosign)
+
+```bash
+cosign verify \
+  --certificate-identity-regexp="https://github.com/ownjoo-org/smb-mock" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  speedimusmaximus/mock-kdc:latest
+```
+
+### Verify build provenance (GitHub)
+
+```bash
+gh attestation verify oci://speedimusmaximus/mock-kdc:latest \
+  --owner ownjoo-org
+```
+
+### Fetch the SBOM
+
+```bash
+cosign download sbom speedimusmaximus/mock-kdc:latest
+```
+
+SBOM files (SPDX JSON) are also attached to every [GitHub release](https://github.com/ownjoo-org/smb-mock/releases).
+
 ## Cross-realm trust (v1.1)
 
 Trust relationship configuration is schema-complete and the env var contract is defined:
