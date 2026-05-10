@@ -94,6 +94,24 @@ This lets consumers that cannot reach the HTTP endpoint parse `docker logs` inst
 
 The `/shared` directory inside the container is a conventional mount point (not a declared `VOLUME`) — you can mount it or ignore it and use the HTTP API instead.
 
+### Securing the keytab endpoint
+
+By default `/keytab` requires no authentication. To require a bearer token, set `KDC_HTTP_TOKEN`:
+
+```
+KDC_HTTP_TOKEN=mysecrettoken
+```
+
+Requests to `/keytab` must then include:
+
+```
+Authorization: Bearer mysecrettoken
+```
+
+Requests without a valid token receive `401 Unauthorized`. The `/healthz` endpoint is always unauthenticated — Docker's `HEALTHCHECK` depends on it.
+
+> **Note for CI use:** The integration tests in this repo retrieve the keytab via `docker exec`, not the HTTP endpoint, so `KDC_HTTP_TOKEN` has no effect on the test suite. It is relevant when using the HTTP API directly (e.g. the cortex `KerberosMixin` pattern).
+
 ### Wizards
 
 **CLI wizard** (generates `.env`, `docker run` script, or compose override):

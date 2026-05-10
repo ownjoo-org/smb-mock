@@ -28,16 +28,30 @@ KDC_CONF = "/etc/krb5kdc/kdc.conf"
 KADM5_ACL = "/etc/krb5kdc/kadm5.acl"
 
 
-def _start_keytab_server(keytab_path: str, port: int) -> None:
-    """Serve the keytab over HTTP so consumers don't need a shared volume."""
+def _start_keytab_server(keytab_path: str, port: int, token: str | None) -> None:
+    """Serve the keytab over HTTP so consumers don't need a shared volume.
+
+    If token is set, GET /keytab requires 'Authorization: Bearer <token>'.
+    GET /healthz is always unauthenticated (used by Docker HEALTHCHECK).
+    """
     keytab_bytes = open(keytab_path, "rb").read()
 
     class _Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
             pass  # silence per-request access log
 
+        def _authorized(self) -> bool:
+            if token is None:
+                return True
+            return self.headers.get("Authorization", "") == f"Bearer {token}"
+
         def do_GET(self):
             if self.path == "/keytab":
+                if not self._authorized():
+                    self.send_response(401)
+                    self.send_header("WWW-Authenticate", 'Bearer realm="keytab"')
+                    self.end_headers()
+                    return
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
                 self.send_header("Content-Length", str(len(keytab_bytes)))
@@ -55,7 +69,10 @@ def _start_keytab_server(keytab_path: str, port: int) -> None:
         target=HTTPServer(("", port), _Handler).serve_forever,
         daemon=True,
     ).start()
-    print(f"  keytab HTTP server listening on :{port}", flush=True)
+    if token:
+        print(f"  keytab HTTP server listening on :{port} (bearer token auth enabled)", flush=True)
+    else:
+        print(f"  keytab HTTP server listening on :{port} (no auth — set KDC_HTTP_TOKEN to require bearer token)", flush=True)
 
 
 def _write(path: str, content: str) -> None:
@@ -116,7 +133,7 @@ def main() -> None:
     b64 = base64.b64encode(open(KEYTAB_PATH, "rb").read()).decode()
     print(f"KEYTAB_B64:{b64}", flush=True)
 
-    _start_keytab_server(KEYTAB_PATH, KEYTAB_HTTP_PORT)
+    _start_keytab_server(KEYTAB_PATH, KEYTAB_HTTP_PORT, os.environ.get("KDC_HTTP_TOKEN") or None)
 
     # kadmind is only needed inside the Docker network (keytab handoff).
     # Both stdout and stderr are suppressed — it has no external port exposure.
