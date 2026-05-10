@@ -82,17 +82,42 @@ def _copy_ccache_from_container(container_ccache: str, host_ccache: str) -> None
 # ---------------------------------------------------------------------------
 @pytest.fixture()
 def krb5_ticket(krb5_conf_path):
-    """Obtain a Kerberos ticket via the KDC container; yield the ccache path."""
-    if not _docker_available():
-        pytest.skip("docker not on PATH — cannot obtain Kerberos ticket")
+    """Obtain a Kerberos ticket; yield the ccache path.
 
-    container_ccache = "/tmp/pytest_test.ccache"
+    Prefers running kinit on the host so the ccache uses the native Kerberos
+    implementation matching the GSSAPI library.  Falls back to docker-exec into
+    the KDC container when the host does not have kinit installed.
+    """
     with tempfile.NamedTemporaryFile(suffix=".ccache", delete=False) as tmp:
         host_ccache = tmp.name
 
     try:
-        _kinit_in_container(TEST_USER, TEST_PASSWORD, container_ccache)
-        _copy_ccache_from_container(container_ccache, host_ccache)
+        obtained = False
+
+        host_kinit = shutil.which("kinit")
+        if host_kinit:
+            env = os.environ.copy()
+            env["KRB5_CONFIG"] = krb5_conf_path
+            env["KRB5CCNAME"] = f"FILE:{host_ccache}"
+            proc = subprocess.run(
+                [host_kinit, "-c", host_ccache, f"{TEST_USER}@{KRB5_REALM}"],
+                input=f"{TEST_PASSWORD}\n",
+                text=True,
+                capture_output=True,
+                env=env,
+            )
+            obtained = proc.returncode == 0
+            if not obtained:
+                # Log but don't fail yet — fall back to container kinit
+                import sys
+                print(f"Host kinit failed (stderr): {proc.stderr.strip()}", file=sys.stderr)
+
+        if not obtained:
+            if not _docker_available():
+                pytest.skip("kinit not on PATH and docker not available — cannot obtain Kerberos ticket")
+            container_ccache = "/tmp/pytest_test.ccache"
+            _kinit_in_container(TEST_USER, TEST_PASSWORD, container_ccache)
+            _copy_ccache_from_container(container_ccache, host_ccache)
 
         old_ccname = os.environ.get("KRB5CCNAME")
         old_conf = os.environ.get("KRB5_CONFIG")

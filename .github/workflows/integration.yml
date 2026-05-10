@@ -19,7 +19,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Kerberos system libraries
-        run: sudo apt-get install -y --no-install-recommends libkrb5-dev
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libkrb5-dev krb5-user
 
       - name: Install test dependencies
         run: pip install -r requirements-test.txt
@@ -44,6 +44,29 @@ jobs:
           echo "Grace period for smbd to finish initialising..."
           sleep 5
 
+      - name: Configure system Kerberos pointing at test KDC
+        run: |
+          sudo tee /etc/krb5.conf <<'EOF'
+          [libdefaults]
+              default_realm = SMBTEST.LOCAL
+              dns_lookup_realm = false
+              dns_lookup_kdc = false
+              rdns = false
+              dns_canonicalize_hostname = false
+              udp_preference_limit = 1
+          [realms]
+              SMBTEST.LOCAL = {
+                  kdc = 127.0.0.1:8800
+              }
+          [domain_realm]
+              .smbtest.local = SMBTEST.LOCAL
+              smbtest.local = SMBTEST.LOCAL
+          EOF
+          # Verify kinit can reach the KDC and get a ticket
+          echo "testpass" | kinit -c /tmp/ci_test.ccache testuser@SMBTEST.LOCAL
+          klist -c /tmp/ci_test.ccache
+          kdestroy -c /tmp/ci_test.ccache
+
       - name: Run integration tests
         run: python -m pytest tests/integration/ -v --timeout=120
         env:
@@ -56,6 +79,10 @@ jobs:
         run: |
           docker compose logs kdc
           docker compose logs samba
+          echo "=== Samba keytab contents ==="
+          docker exec smb-mock-samba-1 klist -k -e /etc/krb5.keytab || true
+          echo "=== Samba smb.conf ==="
+          docker exec smb-mock-samba-1 cat /etc/samba/smb.conf || true
           echo "=== /var/log/samba/ contents ==="
           docker exec smb-mock-samba-1 ls /var/log/samba/ || true
           echo "=== all samba logs ==="

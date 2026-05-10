@@ -134,11 +134,12 @@ def krb5_conf_path(tmp_path_factory) -> str:
         # dns_canonicalize_hostname=false: use the hostname as supplied.
         "    rdns = false\n"
         "    dns_canonicalize_hostname = false\n"
+        # udp_preference_limit=1: always use TCP (Docker UDP NAT can be unreliable).
+        "    udp_preference_limit = 1\n"
         "\n"
         "[realms]\n"
         f"    {KRB5_REALM} = {{\n"
-        # tcp/ prefix forces TCP; UDP may be blocked in CI/container environments.
-        f"        kdc = tcp/{KDC_HOST_MAPPED}:{KDC_PORT}\n"
+        f"        kdc = {KDC_HOST_MAPPED}:{KDC_PORT}\n"
         "    }\n"
         "\n"
         "[domain_realm]\n"
