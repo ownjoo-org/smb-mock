@@ -32,12 +32,12 @@ services:
       - DAC_OVERRIDE       # write config files
     security_opt:
       - no-new-privileges:true
-    pids_limit: 100
     deploy:
       resources:
         limits:
           cpus: "1.0"
           memory: 256M
+          pids: 100
 
   # ── Samba file server ─────────────────────────────────────────────────────
   samba:
@@ -71,12 +71,12 @@ services:
       - DAC_OVERRIDE       # write config files, set passwords
     security_opt:
       - no-new-privileges:true
-    pids_limit: 200
     deploy:
       resources:
         limits:
           cpus: "2.0"
           memory: 512M
+          pids: 200
     depends_on:
       kdc:
         condition: service_healthy
