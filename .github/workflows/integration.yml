@@ -57,8 +57,8 @@ jobs:
           docker compose logs samba
           echo "=== /var/log/samba/ contents ==="
           docker exec smb-mock-samba-1 ls /var/log/samba/ || true
-          echo "=== smbd log ==="
-          docker exec smb-mock-samba-1 sh -c 'cat /var/log/samba/log.smbd 2>/dev/null || cat /var/log/samba/log.* 2>/dev/null || echo "(no samba log files)"'
+          echo "=== all samba logs ==="
+          docker exec smb-mock-samba-1 sh -c 'for f in /var/log/samba/log.*; do echo "--- $f ---"; cat "$f"; done' || echo "(no samba log files)"
         env:
           SMB_PORT: "4450"
           KDC_PORT: "8800"
