@@ -34,6 +34,20 @@ class SambaConfig:
     enable_anonymous: bool = True
     enable_ntlm: bool = True
     enable_kerberos: bool = True
+    # Protocol
+    min_protocol: str = "SMB2"
+    max_protocol: str = "SMB3"
+    # Signing — None means derive from enable_anonymous (auto/mandatory)
+    server_signing: str | None = None
+    # Auth — None means derive from enable_ntlm (ntlmv2-only/no)
+    ntlm_auth: str | None = None
+    # Share defaults
+    browseable: bool = False
+    create_mask: str = "0664"
+    dir_mask: str = "0775"
+    # Logging
+    log_level: int = 0
+    max_log_size: int = 50
     users: list[User] = field(default_factory=list)
     shares: list[Share] = field(default_factory=list)
     trusts: list[Trust] = field(default_factory=list)
@@ -110,6 +124,15 @@ def load_config_from_env(env: dict | None = None) -> SambaConfig:
         enable_anonymous=_parse_bool(env.get("SMB_ENABLE_ANONYMOUS", "true")),
         enable_ntlm=_parse_bool(env.get("SMB_ENABLE_NTLM", "true")),
         enable_kerberos=_parse_bool(env.get("SMB_ENABLE_KERBEROS", "true")),
+        min_protocol=env.get("SMB_MIN_PROTOCOL", "SMB2"),
+        max_protocol=env.get("SMB_MAX_PROTOCOL", "SMB3"),
+        server_signing=env.get("SMB_SERVER_SIGNING") or None,
+        ntlm_auth=env.get("SMB_NTLM_AUTH") or None,
+        browseable=_parse_bool(env.get("SMB_BROWSEABLE", "false")),
+        create_mask=env.get("SMB_CREATE_MASK", "0664"),
+        dir_mask=env.get("SMB_DIR_MASK", "0775"),
+        log_level=int(env.get("SMB_LOG_LEVEL", "0")),
+        max_log_size=int(env.get("SMB_MAX_LOG_SIZE", "50")),
         users=users,
         shares=shares,
         trusts=trusts,
@@ -127,11 +150,20 @@ def _domain_from_hostname(hostname: str) -> str:
 
 def generate_smb_conf(config: SambaConfig) -> str:
     netbios = _netbios_name(config.hostname)
-    ntlm = "ntlmv2-only" if config.enable_ntlm else "no"
 
-    # Signing: mandatory when no anonymous access (prevents MITM downgrade);
+    # Auth: explicit override takes priority; otherwise derive from enable_ntlm
+    ntlm = config.ntlm_auth if config.ntlm_auth is not None else (
+        "ntlmv2-only" if config.enable_ntlm else "no"
+    )
+
+    # Signing: explicit override takes priority; otherwise derive from enable_anonymous.
+    # mandatory when no anonymous access (prevents MITM downgrade);
     # auto when anonymous is enabled (guest sessions cannot sign).
-    signing = "auto" if config.enable_anonymous else "mandatory"
+    signing = config.server_signing if config.server_signing is not None else (
+        "auto" if config.enable_anonymous else "mandatory"
+    )
+
+    browseable = "Yes" if config.browseable else "No"
 
     lines = [
         "[global]",
@@ -140,8 +172,8 @@ def generate_smb_conf(config: SambaConfig) -> str:
         f"    workgroup = {config.workgroup}",
         f"    realm = {config.krb5_realm}",
         "",
-        "    server min protocol = SMB2",
-        "    server max protocol = SMB3",
+        f"    server min protocol = {config.min_protocol}",
+        f"    server max protocol = {config.max_protocol}",
         f"    server signing = {signing}",
         "",
         "    security = user",
@@ -179,9 +211,9 @@ def generate_smb_conf(config: SambaConfig) -> str:
         "    printcap name = /dev/null",
         "    disable spoolss = yes",
         "",
-        "    log level = 0",
+        f"    log level = {config.log_level}",
         "    log file = /var/log/samba/log.%m",
-        "    max log size = 50",
+        f"    max log size = {config.max_log_size}",
     ]
 
     user_names = [u.name for u in config.users] if config.users else None
@@ -189,17 +221,15 @@ def generate_smb_conf(config: SambaConfig) -> str:
     for share in config.shares:
         read_only = "Yes" if share.readonly else "No"
         guest_ok = "Yes" if config.enable_anonymous else "No"
-        create_mask = "0664"
-        dir_mask    = "0775"
         lines += [
             "",
             f"[{share.name}]",
             f"    path = {share.path}",
             f"    read only = {read_only}",
-            "    browseable = No",
+            f"    browseable = {browseable}",
             f"    guest ok = {guest_ok}",
-            f"    create mask = {create_mask}",
-            f"    directory mask = {dir_mask}",
+            f"    create mask = {config.create_mask}",
+            f"    directory mask = {config.dir_mask}",
         ]
         # Restrict non-public shares to explicitly provisioned users
         if not config.enable_anonymous and user_names:

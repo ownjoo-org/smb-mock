@@ -101,6 +101,35 @@ class TestKdcLoadConfigFromEnv(unittest.TestCase):
         })
         self.assertEqual(len(config.trusts), 2)
 
+    def test_default_max_life(self):
+        self.assertEqual(load_config_from_env({}).max_life, "10h 0m 0s")
+
+    def test_custom_max_life(self):
+        self.assertEqual(
+            load_config_from_env({"KDC_MAX_LIFE": "8h 0m 0s"}).max_life, "8h 0m 0s"
+        )
+
+    def test_default_max_renewable_life(self):
+        self.assertEqual(load_config_from_env({}).max_renewable_life, "7d 0h 0m 0s")
+
+    def test_custom_max_renewable_life(self):
+        self.assertEqual(
+            load_config_from_env({"KDC_MAX_RENEWABLE_LIFE": "1d 0h 0m 0s"}).max_renewable_life,
+            "1d 0h 0m 0s",
+        )
+
+    def test_default_supported_enctypes(self):
+        self.assertEqual(
+            load_config_from_env({}).supported_enctypes,
+            "aes256-cts:normal aes128-cts:normal",
+        )
+
+    def test_custom_supported_enctypes(self):
+        self.assertEqual(
+            load_config_from_env({"KDC_SUPPORTED_ENCTYPES": "aes256-cts:normal"}).supported_enctypes,
+            "aes256-cts:normal",
+        )
+
 
 class TestGenerateKdcConf(unittest.TestCase):
     def test_realm_present(self):
@@ -123,6 +152,18 @@ class TestGenerateKdcConf(unittest.TestCase):
     def test_aes128_enctype(self):
         conf = generate_kdc_conf(KdcConfig())
         self.assertIn("aes128-cts", conf)
+
+    def test_custom_max_life_in_conf(self):
+        conf = generate_kdc_conf(KdcConfig(max_life="8h 0m 0s"))
+        self.assertIn("max_life = 8h 0m 0s", conf)
+
+    def test_custom_max_renewable_life_in_conf(self):
+        conf = generate_kdc_conf(KdcConfig(max_renewable_life="1d 0h 0m 0s"))
+        self.assertIn("max_renewable_life = 1d 0h 0m 0s", conf)
+
+    def test_custom_supported_enctypes_in_conf(self):
+        conf = generate_kdc_conf(KdcConfig(supported_enctypes="aes256-cts:normal"))
+        self.assertIn("supported_enctypes = aes256-cts:normal", conf)
 
     def test_realms_section_present(self):
         conf = generate_kdc_conf(KdcConfig())

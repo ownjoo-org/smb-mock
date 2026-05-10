@@ -183,6 +183,63 @@ class TestLoadConfigFromEnv(unittest.TestCase):
         self.assertTrue(load_config_from_env({"SMB_ENABLE_ANONYMOUS": "TRUE"}).enable_anonymous)
         self.assertTrue(load_config_from_env({"SMB_ENABLE_ANONYMOUS": "True"}).enable_anonymous)
 
+    def test_default_protocol(self):
+        config = load_config_from_env({})
+        self.assertEqual(config.min_protocol, "SMB2")
+        self.assertEqual(config.max_protocol, "SMB3")
+
+    def test_custom_min_protocol(self):
+        config = load_config_from_env({"SMB_MIN_PROTOCOL": "SMB3"})
+        self.assertEqual(config.min_protocol, "SMB3")
+
+    def test_custom_max_protocol(self):
+        config = load_config_from_env({"SMB_MAX_PROTOCOL": "SMB3"})
+        self.assertEqual(config.max_protocol, "SMB3")
+
+    def test_default_server_signing_is_none(self):
+        self.assertIsNone(load_config_from_env({}).server_signing)
+
+    def test_custom_server_signing(self):
+        config = load_config_from_env({"SMB_SERVER_SIGNING": "disabled"})
+        self.assertEqual(config.server_signing, "disabled")
+
+    def test_default_ntlm_auth_is_none(self):
+        self.assertIsNone(load_config_from_env({}).ntlm_auth)
+
+    def test_custom_ntlm_auth(self):
+        config = load_config_from_env({"SMB_NTLM_AUTH": "yes"})
+        self.assertEqual(config.ntlm_auth, "yes")
+
+    def test_default_browseable_false(self):
+        self.assertFalse(load_config_from_env({}).browseable)
+
+    def test_custom_browseable(self):
+        self.assertTrue(load_config_from_env({"SMB_BROWSEABLE": "true"}).browseable)
+
+    def test_default_create_mask(self):
+        self.assertEqual(load_config_from_env({}).create_mask, "0664")
+
+    def test_custom_create_mask(self):
+        self.assertEqual(load_config_from_env({"SMB_CREATE_MASK": "0644"}).create_mask, "0644")
+
+    def test_default_dir_mask(self):
+        self.assertEqual(load_config_from_env({}).dir_mask, "0775")
+
+    def test_custom_dir_mask(self):
+        self.assertEqual(load_config_from_env({"SMB_DIR_MASK": "0755"}).dir_mask, "0755")
+
+    def test_default_log_level(self):
+        self.assertEqual(load_config_from_env({}).log_level, 0)
+
+    def test_custom_log_level(self):
+        self.assertEqual(load_config_from_env({"SMB_LOG_LEVEL": "3"}).log_level, 3)
+
+    def test_default_max_log_size(self):
+        self.assertEqual(load_config_from_env({}).max_log_size, 50)
+
+    def test_custom_max_log_size(self):
+        self.assertEqual(load_config_from_env({"SMB_MAX_LOG_SIZE": "100"}).max_log_size, 100)
+
 
 class TestGenerateSmbConf(unittest.TestCase):
     def _cfg(self, **kwargs):
@@ -293,6 +350,68 @@ class TestGenerateSmbConf(unittest.TestCase):
 
     def test_security_user(self):
         self.assertIn("security = user", generate_smb_conf(self._cfg()))
+
+    def test_custom_min_protocol_in_conf(self):
+        conf = generate_smb_conf(self._cfg(min_protocol="SMB3"))
+        self.assertIn("server min protocol = SMB3", conf)
+
+    def test_custom_max_protocol_in_conf(self):
+        conf = generate_smb_conf(self._cfg(max_protocol="SMB3"))
+        self.assertIn("server max protocol = SMB3", conf)
+
+    def test_server_signing_derived_mandatory_when_anon_disabled(self):
+        conf = generate_smb_conf(self._cfg(enable_anonymous=False))
+        self.assertIn("server signing = mandatory", conf)
+
+    def test_server_signing_derived_auto_when_anon_enabled(self):
+        conf = generate_smb_conf(self._cfg(enable_anonymous=True))
+        self.assertIn("server signing = auto", conf)
+
+    def test_server_signing_explicit_overrides_derived(self):
+        conf = generate_smb_conf(self._cfg(enable_anonymous=False, server_signing="auto"))
+        self.assertIn("server signing = auto", conf)
+
+    def test_ntlm_auth_derived_from_enable_ntlm_true(self):
+        conf = generate_smb_conf(self._cfg(enable_ntlm=True))
+        self.assertIn("ntlm auth = ntlmv2-only", conf)
+
+    def test_ntlm_auth_derived_from_enable_ntlm_false(self):
+        conf = generate_smb_conf(self._cfg(enable_ntlm=False))
+        self.assertIn("ntlm auth = no", conf)
+
+    def test_ntlm_auth_explicit_overrides_derived(self):
+        conf = generate_smb_conf(self._cfg(enable_ntlm=True, ntlm_auth="yes"))
+        self.assertIn("ntlm auth = yes", conf)
+
+    def test_browseable_false_by_default(self):
+        conf = generate_smb_conf(self._cfg(shares=[Share("s", "/data/s", False)]))
+        self.assertIn("browseable = No", conf)
+
+    def test_browseable_true_when_set(self):
+        conf = generate_smb_conf(self._cfg(
+            browseable=True, shares=[Share("s", "/data/s", False)]
+        ))
+        self.assertIn("browseable = Yes", conf)
+
+    def test_custom_create_mask_in_share(self):
+        conf = generate_smb_conf(self._cfg(
+            create_mask="0644", shares=[Share("s", "/data/s", False)]
+        ))
+        self.assertIn("create mask = 0644", conf)
+
+    def test_custom_dir_mask_in_share(self):
+        conf = generate_smb_conf(self._cfg(
+            dir_mask="0755", shares=[Share("s", "/data/s", False)]
+        ))
+        self.assertIn("directory mask = 0755", conf)
+
+    def test_custom_log_level_in_conf(self):
+        conf = generate_smb_conf(self._cfg(log_level=3))
+        self.assertIn("log level = 3", conf)
+
+    def test_custom_max_log_size_in_conf(self):
+        conf = generate_smb_conf(self._cfg(max_log_size=100))
+        self.assertIn("max log size = 100", conf)
 
 
 class TestGenerateKrb5ConfSamba(unittest.TestCase):

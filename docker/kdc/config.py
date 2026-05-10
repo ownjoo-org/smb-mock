@@ -25,6 +25,9 @@ class KdcConfig:
     realm: str = "SMBTEST.LOCAL"
     admin_password: str = "adminpass"
     smb_hostname: str = "smbserver.smbtest.local"
+    max_life: str = "10h 0m 0s"
+    max_renewable_life: str = "7d 0h 0m 0s"
+    supported_enctypes: str = "aes256-cts:normal aes128-cts:normal"
     users: list[KdcPrincipal] = field(default_factory=list)
     trusts: list[KdcTrust] = field(default_factory=list)
 
@@ -70,6 +73,9 @@ def load_config_from_env(env: dict | None = None) -> KdcConfig:
         realm=env.get("KRB5_REALM", "SMBTEST.LOCAL"),
         admin_password=env.get("KRB5_ADMIN_PASSWORD", "adminpass"),
         smb_hostname=env.get("SMB_HOSTNAME", "smbserver.smbtest.local"),
+        max_life=env.get("KDC_MAX_LIFE", "10h 0m 0s"),
+        max_renewable_life=env.get("KDC_MAX_RENEWABLE_LIFE", "7d 0h 0m 0s"),
+        supported_enctypes=env.get("KDC_SUPPORTED_ENCTYPES", "aes256-cts:normal aes128-cts:normal"),
         users=users,
         trusts=trusts,
     )
@@ -88,10 +94,10 @@ def generate_kdc_conf(config: KdcConfig) -> str:
         "        acl_file = /etc/krb5kdc/kadm5.acl",
         "        key_stash_file = /etc/krb5kdc/stash",
         "        kdc_ports = 88",
-        "        max_life = 10h 0m 0s",
-        "        max_renewable_life = 7d 0h 0m 0s",
+        f"        max_life = {config.max_life}",
+        f"        max_renewable_life = {config.max_renewable_life}",
         "        master_key_type = aes256-cts",
-        "        supported_enctypes = aes256-cts:normal aes128-cts:normal",
+        f"        supported_enctypes = {config.supported_enctypes}",
         "    }",
     ]
     return "\n".join(lines) + "\n"
